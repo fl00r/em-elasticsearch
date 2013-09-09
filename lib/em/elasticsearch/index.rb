@@ -32,7 +32,7 @@ module EM::ElasticSearch
     #
     def multi_get(ids, fields = nil)
       body = if fields
-        Yajl.dump docs: ids.map{ |id| _id: id.to_s, fields: fields }
+        Yajl.dump docs: ids.map{ |id| { _id: id.to_s, fields: fields } }
       else
         Yajl.dump ids: ids.map(&:to_s)
       end
@@ -50,8 +50,9 @@ module EM::ElasticSearch
     #
     def bulk_insert(docs)
       body = docs.map do |doc|
+        id = doc.delete(:_id) or raise "Document without _id in bulk operation: #{doc.inspect}"
         [
-          Yajl.dump index: { _id: doc.delete(:_id) },
+          Yajl.dump(index: { _id: id }),
           doc
         ]
       end * "\n"

@@ -1,10 +1,12 @@
 require 'eventmachine'
 require 'em-http-request'
 require 'logger'
+require 'yajl'
 require File.expand_path("../elasticsearch/client", __FILE__)
 require File.expand_path("../elasticsearch/cluster", __FILE__)
+require File.expand_path("../elasticsearch/index", __FILE__)
 
-module EM::ElasticSearch
+module ::EM::ElasticSearch
   extend self
 
   def logger

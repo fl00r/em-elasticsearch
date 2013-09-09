@@ -23,4 +23,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "eventmachine"
   spec.add_dependency "em-http-request"
+  spec.add_dependency "yajl-ruby"
 end
