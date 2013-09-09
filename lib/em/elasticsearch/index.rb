@@ -52,8 +52,8 @@ module EM::ElasticSearch
       body = docs.map do |doc|
         id = doc.delete(:_id) or raise "Document without _id in bulk operation: #{doc.inspect}"
         [
-          Yajl.dump(index: { _id: id }),
-          doc
+          Yajl.dump({ index: { _id: id } }),
+          Yajl.dump(doc)
         ]
       end * "\n"
       @client.post path: [@index, @type, "_bulk"] * "/", body: body + "\n"
