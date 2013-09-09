@@ -3,14 +3,16 @@ module EM::ElasticSearch
     DEFAULT_HOST = "http://127.0.0.1"
     DEFAULT_PORT = 9200
     DEFAULT_KEEPALIVE = true
+    DEFAULT_TYPE = :em
 
     def initialize(opts = {})
       @host = opts[:host] || DEFAULT_HOST
       @port = opts[:port] || DEFAULT_PORT
       @keepalive = opts[:keepalive] || DEFAULT_KEEPALIVE
+      @type = opts[:type] || DEFAULT_TYPE
 
       EM::ElasticSearch.logger.level = opts[:logger_level] || Logger::DEBUG
-      @url = [@host, @port] * ":"
+      @url = "http://" + [@host, @port] * ":"
     end
 
     def connection
@@ -20,7 +22,12 @@ module EM::ElasticSearch
 
     [:get, :post, :put, :delete, :head].each do |method|
       define_method method do |opts|
-        make_request(method, opts)
+        case @type
+        when :em
+          make_em_request(method, opts)
+        when :fiber
+          make_fiber_request(method, opts)
+        end
       end
     end
 
@@ -237,7 +244,7 @@ module EM::ElasticSearch
 
     # http://www.elasticsearch.org/guide/reference/api/admin-indices-types-exists/
     #
-    def type_eistst?(opts = {})
+    def type_exists?(opts = {})
       indices = get_opts(opts, true, :index, :indices) * ","
       types = get_opts(opts, true, :type, :types) * ","
       head path: "#{indices}/#{types}"
@@ -245,10 +252,27 @@ module EM::ElasticSearch
 
     private
 
-    def make_request(method, opts)
+    def make_em_request(method, opts)
       opts[:keepalive] = true  if @keepalive
       EM::ElasticSearch.logger.debug("Going to #{@host}:#{@port}/#{opts[:path]}")
       connection.send(method, opts)
+    end
+
+    def make_fiber_request(method, opts)
+      fib = Fiber.current
+      opts[:keepalive] = true  if @keepalive
+      EM::ElasticSearch.logger.debug("Going to #{@host}:#{@port}/#{opts[:path]}")
+      req = connection.send(method, opts)
+      req.callback do
+        fib.resume(req)
+      end
+      req.errback do
+        err = Exception.new(req.error)
+        fib.resume(err)
+      end
+      resp = Fiber.yield
+      raise(resp)  if Exception === resp
+      resp
     end
 
     def get_opts(opts, req, *keys)
