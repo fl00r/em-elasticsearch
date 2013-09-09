@@ -28,6 +28,10 @@ module EM::ElasticSearch
       @cluster ||= EM::ElasticSearch::Cluster.new(self)
     end
 
+    def index(name, type)
+      EM::ElasticSearch::Index.new(self, name, type)
+    end
+
     # http://www.elasticsearch.org/guide/reference/api/admin-indices-create-index/
     #
     def create_index(opts = {})
@@ -231,6 +235,8 @@ module EM::ElasticSearch
       head path: indices
     end
 
+    # http://www.elasticsearch.org/guide/reference/api/admin-indices-types-exists/
+    #
     def type_eistst?(opts = {})
       indices = get_opts(opts, true, :index, :indices) * ","
       types = get_opts(opts, true, :type, :types) * ","
