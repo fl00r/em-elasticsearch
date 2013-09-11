@@ -8,11 +8,13 @@ module EM::ElasticSearch
 
     # http://www.elasticsearch.org/guide/reference/api/get/
     #
-    def get(id, source = false)
+    def get(id, opts = {})
+      source = opts.delete :source
+      body = Yajl.dump opts
       if source
-        @client.get path: [@index, @type, id, "_source"] * "/"
+        @client.get path: [@index, @type, id, "_source"] * "/", body: body
       else
-        @client.get path: [@index, @type, id] * "/"
+        @client.get path: [@index, @type, id] * "/", body: body
       end
     end
 
@@ -30,7 +32,8 @@ module EM::ElasticSearch
 
     # http://www.elasticsearch.org/guide/reference/api/multi-get/
     #
-    def multi_get(ids, fields = nil)
+    def multi_get(ids, opts = {})
+      fields = opts.delete :fields
       body = if fields
         Yajl.dump docs: ids.map{ |id| { _id: id.to_s, fields: fields } }
       else
