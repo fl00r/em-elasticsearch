@@ -22,12 +22,7 @@ module EM::ElasticSearch
 
     [:get, :post, :put, :delete, :head].each do |method|
       define_method method do |opts|
-        case @type
-        when :em
-          make_em_request(method, opts)
-        when :fiber
-          make_fiber_request(method, opts)
-        end
+        make_request(method, opts)
       end
     end
 
@@ -252,27 +247,10 @@ module EM::ElasticSearch
 
     private
 
-    def make_em_request(method, opts)
+    def make_request(method, opts)
       opts[:keepalive] = true  if @keepalive
       EM::ElasticSearch.logger.debug("Going to #{@host}:#{@port}/#{opts[:path]}")
       connection.send(method, opts)
-    end
-
-    def make_fiber_request(method, opts)
-      fib = Fiber.current
-      opts[:keepalive] = true  if @keepalive
-      EM::ElasticSearch.logger.debug("Going to #{@host}:#{@port}/#{opts[:path]}")
-      req = connection.send(method, opts)
-      req.callback do
-        fib.resume(req)
-      end
-      req.errback do
-        err = Exception.new(req.error)
-        fib.resume(err)
-      end
-      resp = Fiber.yield
-      raise(resp)  if Exception === resp
-      resp
     end
 
     def get_opts(opts, req, *keys)

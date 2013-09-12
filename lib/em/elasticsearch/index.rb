@@ -8,13 +8,11 @@ module EM::ElasticSearch
 
     # http://www.elasticsearch.org/guide/reference/api/get/
     #
-    def get(id, opts = {})
-      source = opts.delete :source
-      body = Yajl.dump opts
+    def get(id, source = false)
       if source
-        @client.get path: [@index, @type, id, "_source"] * "/", body: body
+        @client.get path: [@index, @type, id, "_source"] * "/"
       else
-        @client.get path: [@index, @type, id] * "/", body: body
+        @client.get path: [@index, @type, id] * "/"
       end
     end
 
@@ -32,8 +30,7 @@ module EM::ElasticSearch
 
     # http://www.elasticsearch.org/guide/reference/api/multi-get/
     #
-    def multi_get(ids, opts = {})
-      fields = opts.delete :fields
+    def multi_get(ids, fields = nil)
       body = if fields
         Yajl.dump docs: ids.map{ |id| { _id: id.to_s, fields: fields } }
       else
@@ -58,6 +55,28 @@ module EM::ElasticSearch
           Yajl.dump({ index: { _id: id } }),
           Yajl.dump(doc)
         ]
+      end * "\n"
+      @client.post path: [@index, @type, "_bulk"] * "/", body: body + "\n"
+    end
+
+    # http://www.elasticsearch.org/guide/reference/api/bulk/
+    #
+    def bulk_update(docs)
+      body = docs.map do |doc|
+        id = doc.delete(:_id) or raise "Document without _id in bulk operation: #{doc.inspect}"
+        [
+          Yajl.dump({ update: { _id: id } }),
+          Yajl.dump(doc)
+        ]
+      end * "\n"
+      @client.post path: [@index, @type, "_bulk"] * "/", body: body + "\n"
+    end
+
+    # http://www.elasticsearch.org/guide/reference/api/bulk/
+    #
+    def bulk(docs)
+      body = docs.map do |doc|
+        Yajl.dump doc
       end * "\n"
       @client.post path: [@index, @type, "_bulk"] * "/", body: body + "\n"
     end
